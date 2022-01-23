@@ -1,0 +1,10 @@
+#!/bin/bash
+
+/home/emil/Apps/Obsidian-0.12.3.AppImage &
+obsidian_pid=$!
+
+while ps -p $obsidian_pid >/dev/null; do
+    echo "$obsidian_pid is running"
+    TARGETDIR=~/Documents/Vault gitautosync.sh &
+    sleep 15
+done

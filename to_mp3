@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ffmpeg -i "$1" -acodec libmp3lame "$1.mp3"
