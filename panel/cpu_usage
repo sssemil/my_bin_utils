@@ -1,0 +1,3 @@
+#!/bin/bash
+
+top -n 1 -b | sed -n 3p | sed 's/,/./' | awk '{printf "💻 %0.1f%", $2}'

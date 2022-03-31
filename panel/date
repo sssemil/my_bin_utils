@@ -1,0 +1,4 @@
+#!/bin/bash
+
+#date '+WW%U %a[%w], %d. %b %H:%M:%S'
+date '+WW%U-%w'

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR
+
+PANEL_COMMANDS=("date" "weather" "cpu_temp" "cpu_usage" "mem_usage")
+
+echo -n "| "
+for COMMAND in "${PANEL_COMMANDS[@]}"; do
+	echo -n "`./$COMMAND` | "
+done
+

@@ -1,0 +1,4 @@
+#!/bin/bash
+ 
+#curl -s wttr.in/München\?format=1 | tr -s ' '
+curl -s 'wttr.in/Munich?format=+%c+%t(%f)+%p' | xargs
