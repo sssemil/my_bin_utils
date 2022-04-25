@@ -1,0 +1,11 @@
+#!/bin/bash
+
+TOTAL_COUNT=`tmux list-sessions | wc -l`
+ATTACHED_COUNT=`tmux list-sessions | grep attached | wc -l`
+
+if [ $TOTAL_COUNT -eq $ATTACHED_COUNT ]; then
+    tmux
+else
+    DETACHED_SESSION=`tmux list-sessions -F "#{session_name} #{session_attached}" | grep " 0" | awk '{print $1}' | head -n 1`
+    tmux a -t $DETACHED_SESSION
+fi
