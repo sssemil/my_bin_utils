@@ -3,6 +3,9 @@
 TOTAL_COUNT=`tmux list-sessions | wc -l`
 ATTACHED_COUNT=`tmux list-sessions | grep attached | wc -l`
 
+# keep tmux alive after logout
+alias tmux="systemd-run --scope --user tmux"
+
 if [ $TOTAL_COUNT -eq $ATTACHED_COUNT ]; then
     tmux
 else
