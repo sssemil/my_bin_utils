@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# define LOCATION
+# define OPENWEATHER_API_KEY
+
+weather_report_json=`curl -s "https://api.openweathermap.org/data/2.5/weather?q=${LOCATION}&APPID=${OPENWEATHER_API_KEY}&units=metric"`
+
+cod=`echo $weather_report_json | jq -r '.cod'`
+#echo $weather_report_json
+
+if [ $cod == "200" ]; then
+    desc=`echo $weather_report_json | jq -r '.weather[0].main'`
+    icon_name=`echo $weather_report_json | jq -r '.weather[0].icon'`
+    icon_search_term=".[\"$icon_name\"]"
+    icon_emoji=$(cat ~/bin/panel/openweather_icon_map.json | jq -r $icon_search_term)
+    temp=`echo $weather_report_json | jq -r '.main.temp' | round 0`
+    temp_min=`echo $weather_report_json | jq -r '.main.temp_min' | round 0`
+    temp_max=`echo $weather_report_json | jq -r '.main.temp_max' | round 0`
+    temp_feel=`echo $weather_report_json | jq -r '.main.feels_like' | round 0`
+    #rain_1h=`echo $weather_report_json | jq -r '.rain.["1h"]'`
+
+    echo "$icon_emoji $temp_min;$temp($temp_feel);$temp_max"
+else
+    echo "ERR{${cod}}"
+fi
+
+#curl -s "wttr.in/${LOCATION}?format=+%c+%t(%f)+%p" | xargs | head -c 20

@@ -1,12 +1,28 @@
 #!/bin/bash
 
+CACHE_DIR=$HOME/.cache/panel
+mkdir $CACHE_DIR 2>/dev/null || true 
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 
-PANEL_COMMANDS=("date" "weather" "cpu_temp" "cpu_usage" "mem_usage")
+PANEL_COMMANDS=('date live' 'weather cached' 'openweather cached' 'cpu_temp live' 'cpu_usage live' 'mem_usage live')
 
 echo -n "| "
-for COMMAND in "${PANEL_COMMANDS[@]}"; do
-	echo -n "`./$COMMAND` | "
+for COMMAND_OBJ in "${PANEL_COMMANDS[@]}"; do
+    COMMAND_OBJ=($COMMAND_OBJ)
+    COMMAND=${COMMAND_OBJ[0]}
+    TYPE=${COMMAND_OBJ[1]}
+
+    if [ "$TYPE" == "live" ]; then
+        echo -n "`./$COMMAND` | "
+    else
+        CACHE_PATH=${CACHE_DIR}/${COMMAND}_cache
+        if [ ! -f "$CACHE_PATH" ] || test "`find $CACHE_PATH -mmin +300`"; then
+            ./$COMMAND > $CACHE_PATH
+        fi
+
+        echo -n "`cat $CACHE_PATH` | "
+    fi
 done
 
