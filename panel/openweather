@@ -12,14 +12,14 @@ if [ $cod == "200" ]; then
     desc=`echo $weather_report_json | jq -r '.weather[0].main'`
     icon_name=`echo $weather_report_json | jq -r '.weather[0].icon'`
     icon_search_term=".[\"$icon_name\"]"
-    icon_emoji=$(cat ~/bin/panel/openweather_icon_map.json | jq -r $icon_search_term)
+    icon_emoji=$(cat ~/bin/panel/openweather_nerdfont_icon_map.json | jq -r $icon_search_term)
     temp=`echo $weather_report_json | jq -r '.main.temp' | round 0`
     temp_min=`echo $weather_report_json | jq -r '.main.temp_min' | round 0`
     temp_max=`echo $weather_report_json | jq -r '.main.temp_max' | round 0`
     temp_feel=`echo $weather_report_json | jq -r '.main.feels_like' | round 0`
     #rain_1h=`echo $weather_report_json | jq -r '.rain.["1h"]'`
 
-    echo "$icon_emoji $temp_min;$temp($temp_feel);$temp_max"
+    echo "$icon_emoji  $temp_min;$temp($temp_feel);$temp_max"
 else
     echo "ERR{${cod}}"
 fi

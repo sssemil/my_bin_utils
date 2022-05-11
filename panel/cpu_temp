@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sensors | tr -s ' ' | awk '{print $2}' | grep "°C" | tr -d '°C' | awk '{s+=$1}END{printf "💻 %.0f°C", s/NR}'
+sensors | tr -s ' ' | awk '{print $2}' | grep "°C" | tr -d '°C' | awk '{s+=$1}END{printf "﬙ %.0f°C", s/NR}'
