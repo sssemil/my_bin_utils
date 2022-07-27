@@ -1,0 +1,6 @@
+#!/bin/bash
+
+while ! $@
+do
+    echo "Command failed, will run again..."
+done
