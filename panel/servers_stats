@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# TODO: Run in parallel with something like `xargs -P ...` maybe
+
+# define SERVERS=('GOOGLE google.com' 'CLOUDFLARE DNS 1.1.1.1')
+. $CONFIG_DIR/panel_config.sh
+
+DELIMETER=""
+for SERVER_OBJ in "${SERVERS[@]}"; do
+    SERVER_OBJ=($SERVER_OBJ)
+    SHORT_NAME=${SERVER_OBJ[0]}
+    DOMAN=${SERVER_OBJ[1]}
+
+    echo -n "$DELIMETER$SHORT_NAME:"
+    ping_once $DOMAN
+    DELIMETER="|"
+done
+

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+PRICE=`curl -s "https://api.kraken.com/0/public/OHLC?pair=XMRUSD&interval=1" | jq -r '.result.XXMRZUSD[0][4]'`
+echo -n "$PRICE $/ɱ"

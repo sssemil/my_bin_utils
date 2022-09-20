@@ -1,0 +1,10 @@
+#!/bin/bash
+
+DIRTY_BYTES=`grep -e Dirty: /proc/meminfo | awk '{print $2}'`
+WRITEBACK_BYTES=`grep -e Writeback: /proc/meminfo | awk '{print $2}'`
+
+SUM_BYTES=$(( ($DIRTY_BYTES + $WRITEBACK_BYTES) * 1000 ))
+
+echo -n "Dirty:"
+echo -n $SUM_BYTES | to_auto_bytes
+echo -n "B"

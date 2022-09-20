@@ -1,28 +1,36 @@
 #!/bin/bash
 
-CACHE_DIR=$HOME/.cache/panel
+export CACHE_DIR=$HOME/.cache/panel
+export CONFIG_DIR=$HOME/.config/panel
+
+. $CONFIG_DIR/panel_config.sh
+
 mkdir $CACHE_DIR 2>/dev/null || true 
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 
-PANEL_COMMANDS=('date live' 'weather cached' 'openweather cached' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live')
+PANEL_COMMANDS=('date live' 'openweather cached' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live' 'servers_stats live' 'xmr_price live')
 
-echo -n "| "
+echo -n "|"
 for COMMAND_OBJ in "${PANEL_COMMANDS[@]}"; do
     COMMAND_OBJ=($COMMAND_OBJ)
     COMMAND=${COMMAND_OBJ[0]}
     TYPE=${COMMAND_OBJ[1]}
 
     if [ "$TYPE" == "live" ]; then
-        echo -n "`./$COMMAND` | "
+        echo -n "`./$COMMAND`|"
     else
         CACHE_PATH=${CACHE_DIR}/${COMMAND}_cache
         if [ ! -f "$CACHE_PATH" ] || test "`find $CACHE_PATH -mmin +30`"; then
             ./$COMMAND > $CACHE_PATH
+            RESULT=$?
+            if [ $RESULT -ne 0 ]; then
+                rm $CACHE_PATH 
+            fi
         fi
 
-        echo -n "`cat $CACHE_PATH` | "
+        echo -n "`cat $CACHE_PATH`|"
     fi
 done
 
