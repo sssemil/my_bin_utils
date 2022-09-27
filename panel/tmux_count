@@ -1,4 +1,4 @@
 #!/bin/bash
 
-echo -n ""
+echo -n " "
 /usr/bin/tmux list-sessions | wc -l
