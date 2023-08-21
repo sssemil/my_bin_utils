@@ -1,3 +1,4 @@
 #!/bin/bash
 
-free | sed -n 2p | awk '{u=$3; l=$2} {printf " %.0f%", 100*u/l;}'
+echo -ne '\uf472 '
+free | sed -n 2p | awk '{u=$3; l=$2} {printf "%.0f%", 100*u/l;}'
