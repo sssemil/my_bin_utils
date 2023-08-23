@@ -1,0 +1,41 @@
+#!/bin/bash
+
+DOCK_DEVICE="17ef:a393"
+BATTERY_THRESHOLD_PATH="/sys/class/power_supply/BAT0/charge_control_end_threshold"
+
+log() {
+    echo "POWER MANAGER: $1" | tee /dev/kmsg
+}
+
+log "Power event: {$1}"
+
+# Check if external power supply is connected
+is_power_connected=0
+for power_supply_status in /sys/class/power_supply/*/online; do
+    if [[ $(cat "$power_supply_status") -eq 1 ]]; then
+        is_power_connected=1
+        break
+    fi
+done
+
+# Check if the USB dock is connected
+is_dock_connected=$(lsusb | grep "$DOCK_DEVICE")
+
+# Decide and set battery charging threshold
+if [[ $is_power_connected -eq 1 && -n $is_dock_connected ]]; then
+    log "External power supply is connected and dock is connected."
+    echo 60 > $BATTERY_THRESHOLD_PATH
+else
+    echo 100 > $BATTERY_THRESHOLD_PATH
+    if [[ $is_power_connected -ne 1 ]]; then
+        log "No external power supply is connected."
+    fi
+    if [[ -z $is_dock_connected ]]; then
+        log "Dock not connected."
+    fi
+fi
+
+# Report the final battery threshold setting
+current_threshold=$(cat "$BATTERY_THRESHOLD_PATH")
+log "Battery threshold is set to: $current_threshold"
+

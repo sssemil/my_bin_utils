@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Check if script is running as sudo
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run as root or use sudo"
+  exit 1
+fi
+
+# Define the file path for convenience
+FILE_PATH="/sys/class/power_supply/BAT0/charge_control_end_threshold"
+
+# Check if the file exists
+if [[ ! -f "$FILE_PATH" ]]; then
+    echo "Error: $FILE_PATH does not exist. Exiting."
+    exit 1
+fi
+
+# Read the current value
+current_value=$(cat "$FILE_PATH")
+
+# Switch the value based on the current value
+if [[ "$current_value" == "100" ]]; then
+    echo "70" > "$FILE_PATH"
+else
+    echo "100" > "$FILE_PATH"
+fi
+
+# Read and print the final value
+final_value=$(cat "$FILE_PATH")
+echo "Current value is now: $final_value"
