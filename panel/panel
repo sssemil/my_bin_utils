@@ -10,16 +10,17 @@ mkdir $CACHE_DIR 2>/dev/null || true
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
 
-PANEL_COMMANDS=('date live' 'openweather cached' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live' 'servers_stats live' 'xmr_price cached' 'eth_price cached' 'eur_price cached')
+PANEL_COMMANDS=('date live' 'openweather cached' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live' 'bat_limit live' 'servers_stats live' 'xmr_price cached' 'eth_price cached' 'eur_price cached')
 
 echo -n "|"
 for COMMAND_OBJ in "${PANEL_COMMANDS[@]}"; do
     COMMAND_OBJ=($COMMAND_OBJ)
     COMMAND=${COMMAND_OBJ[0]}
     TYPE=${COMMAND_OBJ[1]}
+    OUTPUT=""
 
     if [ "$TYPE" == "live" ]; then
-        echo -n "`./$COMMAND`|"
+        OUTPUT=$(./$COMMAND)
     else
         CACHE_PATH=${CACHE_DIR}/${COMMAND}_cache
         if [ ! -f "$CACHE_PATH" ] || test "`find $CACHE_PATH -mmin +30`"; then
@@ -30,7 +31,10 @@ for COMMAND_OBJ in "${PANEL_COMMANDS[@]}"; do
             fi
         fi
 
-        echo -n "`cat $CACHE_PATH`|"
+        OUTPUT=$(cat $CACHE_PATH)
+    fi
+
+    if [[ ! -z $OUTPUT ]]; then
+        echo -n "$OUTPUT|"
     fi
 done
-

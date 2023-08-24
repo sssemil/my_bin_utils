@@ -1,18 +1,25 @@
 #!/bin/bash
 
-# TODO: Run in parallel with something like `xargs -P ...` maybe
-
 # define SERVERS=('GOOGLE google.com' 'CLOUDFLARE DNS 1.1.1.1')
 . $CONFIG_DIR/panel_config.sh
 
-DELIMETER=""
-for SERVER_OBJ in "${SERVERS[@]}"; do
-    SERVER_OBJ=($SERVER_OBJ)
-    SHORT_NAME=${SERVER_OBJ[0]}
-    DOMAN=${SERVER_OBJ[1]}
+ping_server() {
+    SERVER_INFO=($1)
+    SHORT_NAME=${SERVER_INFO[0]}
+    DOMAIN=${SERVER_INFO[1]}
+    
+    # Use RETURN_VALUE to collect output to avoid concurrency issues with echo
+    RETURN_VALUE="$SHORT_NAME:"
+    RETURN_VALUE+=$(ping_once $DOMAIN)
+    echo "$RETURN_VALUE"
+}
 
-    echo -n "$DELIMETER$SHORT_NAME:"
-    ping_once $DOMAN
-    DELIMETER="|"
-done
+export -f ping_server
 
+mapfile -t results < <(for SERVER in "${SERVERS[@]}"; do
+    echo "$SERVER"
+done | xargs -I {} -P "$(echo "${#SERVERS[@]}")" bash -c 'ping_server "$@"' _ {})
+
+IFS="|"
+echo "${results[*]}"
+unset IFS
