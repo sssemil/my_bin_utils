@@ -2,12 +2,27 @@
 
 DOCK_DEVICE="17ef:a393"
 BATTERY_THRESHOLD_PATH="/sys/class/power_supply/BAT0/charge_control_end_threshold"
+OVERRIDE_PATH="/tmp/asus_bat_limit_override"
+BATTERY_CAPACITY_PATH="/sys/class/power_supply/BAT0/capacity"
 
 log() {
     echo "POWER MANAGER: $1" | tee /dev/kmsg
 }
 
 log "Power event: {$1}"
+
+# Get the current battery capacity
+current_capacity=$(cat "$BATTERY_CAPACITY_PATH")
+
+# If override file exists and battery isn't full, log and exit
+if [[ -e $OVERRIDE_PATH && $current_capacity -ne 100 ]]; then
+    log "Override file found, and battery is not fully charged. Not changing the threshold."
+    exit
+fi
+if [[ -e $OVERRIDE_PATH && $current_capacity -eq 100 ]]; then
+    log "Override file found, and battery is fully charged. Removing the override file."
+    rm -f $OVERRIDE_PATH
+fi
 
 # Check if external power supply is connected
 is_power_connected=0

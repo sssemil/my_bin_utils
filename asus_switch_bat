@@ -8,6 +8,7 @@ fi
 
 # Define the file path for convenience
 FILE_PATH="/sys/class/power_supply/BAT0/charge_control_end_threshold"
+OVERRIDE_PATH="/tmp/asus_bat_limit_override"
 
 # Check if the file exists
 if [[ ! -f "$FILE_PATH" ]]; then
@@ -28,3 +29,6 @@ fi
 # Read and print the final value
 final_value=$(cat "$FILE_PATH")
 echo "Current value is now: $final_value"
+
+# Create the override file since value is being set manually
+touch "$OVERRIDE_PATH"
