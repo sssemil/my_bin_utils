@@ -1,3 +1,4 @@
 SUBSYSTEM=="power_supply", ATTR{online}=="0", RUN+="/home/emil/bin/power_event power_supply_online"
 SUBSYSTEM=="power_supply", ATTR{online}=="1", RUN+="/home/emil/bin/power_event power_supply_offline"
+SUBSYSTEM=="power_supply", ENV{ACTION}=="*", RUN+="/home/emil/bin/power_event $env{ACTION}"
 SUBSYSTEMS=="usb", ATTR{idVendor}=="17ef", ATTR{idProduct}=="a393", ENV{ACTION}=="*", RUN+="/home/emil/bin/power_event $env{ACTION}"

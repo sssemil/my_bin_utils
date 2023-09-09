@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DOCK_DEVICE="17ef:a393"
+DOCK_DEVICES=("17ef:a393" "2109:0822")
 BATTERY_THRESHOLD_PATH="/sys/class/power_supply/BAT0/charge_control_end_threshold"
 OVERRIDE_PATH="/tmp/asus_bat_limit_override"
 BATTERY_CAPACITY_PATH="/sys/class/power_supply/BAT0/capacity"
@@ -34,23 +34,43 @@ for power_supply_status in /sys/class/power_supply/*/online; do
 done
 
 # Check if the USB dock is connected
-is_dock_connected=$(lsusb | grep "$DOCK_DEVICE")
+is_usb_dock_connected=0
+for device in "${DOCK_DEVICES[@]}"; do
+    if lsusb | grep -q "$device"; then
+        is_usb_dock_connected=1
+        break
+    fi
+done
+
+# Check for multiple displays using xrandr
+display_count=$(xrandr --query | grep " connected" | wc -l)
+if [[ $display_count -gt 1 ]]; then
+    is_multidisplay=1
+else
+    is_multidisplay=0
+fi
+
+# Determine if the system is docked
+if [[ $is_usb_dock_connected -eq 1 || $is_multidisplay -eq 1 ]]; then
+    is_docked=1
+else
+    is_docked=0
+fi
 
 # Decide and set battery charging threshold
-if [[ $is_power_connected -eq 1 && -n $is_dock_connected ]]; then
-    log "External power supply is connected and dock is connected."
-    echo 60 > $BATTERY_THRESHOLD_PATH
+if [[ $is_power_connected -eq 1 && $is_docked -eq 1 ]]; then
+    log "External power supply is connected and the system is docked."
+    echo 70 > $BATTERY_THRESHOLD_PATH
 else
     echo 100 > $BATTERY_THRESHOLD_PATH
     if [[ $is_power_connected -ne 1 ]]; then
         log "No external power supply is connected."
     fi
-    if [[ -z $is_dock_connected ]]; then
-        log "Dock not connected."
+    if [[ $is_docked -ne 1 ]]; then
+        log "System is not docked."
     fi
 fi
 
 # Report the final battery threshold setting
 current_threshold=$(cat "$BATTERY_THRESHOLD_PATH")
 log "Battery threshold is set to: $current_threshold"
-
