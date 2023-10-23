@@ -4,4 +4,4 @@
 . $CONFIG_DIR/panel_config.sh
 
 PRICE=`curl -s "https://api.freecurrencyapi.com/v1/latest?apikey=$FC_API_KEY&currencies=EUR" | jq -r '.data.EUR'`
-printf "%.2f $/€" "$PRICE"
+printf "%.3f $/€" "$PRICE"
