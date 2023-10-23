@@ -5,14 +5,13 @@ export PATH=$HOME/bin:$PATH
 export CACHE_DIR=$HOME/.cache/panel
 export CONFIG_DIR=$HOME/.config/panel
 
+PANEL_COMMANDS=('date live' 'openweather cached' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live' 'servers_stats live' 'xmr_price cached' 'eth_price cached' 'eur_price cached') 
 . $CONFIG_DIR/panel_config.sh
 
 mkdir $CACHE_DIR 2>/dev/null || true 
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd $SCRIPT_DIR
-
-PANEL_COMMANDS=('date live' 'openweather cached' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live' 'servers_stats live' 'xmr_price cached' 'eth_price cached' 'eur_price cached' 'bat_limit live')
 
 echo -n "|"
 for COMMAND_OBJ in "${PANEL_COMMANDS[@]}"; do
