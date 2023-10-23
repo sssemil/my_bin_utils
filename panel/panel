@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export PATH=$HOME/bin:$PATH
+
 export CACHE_DIR=$HOME/.cache/panel
 export CONFIG_DIR=$HOME/.config/panel
 
