@@ -1,0 +1,5 @@
+#!/bin/bash
+export LC_ALL=C
+read -r line
+line=${line//,/.}
+printf "%.${2:-0}f" "$line"
