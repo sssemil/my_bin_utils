@@ -5,7 +5,7 @@ export PATH=$HOME/bin:$PATH
 export CACHE_DIR=$HOME/.cache/panel
 export CONFIG_DIR=$HOME/.config/panel
 
-PANEL_COMMANDS=('date live' 'openweather cached' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live' 'servers_stats live' 'xmr_price cached' 'eth_price cached' 'eur_price cached') 
+PANEL_COMMANDS=('date live' 'openweather cached 30' 'tmux_count live' 'cpu_temp live' 'cpu_usage live' 'mem_usage live' 'servers_stats live' 'xmr_price cached 30' 'eth_price cached 30' 'eur_price cached 30') 
 . $CONFIG_DIR/panel_config.sh
 
 mkdir $CACHE_DIR 2>/dev/null || true 
@@ -15,16 +15,17 @@ cd $SCRIPT_DIR
 
 echo -n "|"
 for COMMAND_OBJ in "${PANEL_COMMANDS[@]}"; do
-    COMMAND_OBJ=($COMMAND_OBJ)
+    IFS=' ' read -r -a COMMAND_OBJ <<< "$COMMAND_OBJ"
     COMMAND=${COMMAND_OBJ[0]}
     TYPE=${COMMAND_OBJ[1]}
+    CACHE_DURATION=${COMMAND_OBJ[2]:-30}  # Default cache duration is 30 minutes if not specified
     OUTPUT=""
 
     if [ "$TYPE" == "live" ]; then
         OUTPUT=$(./$COMMAND)
     else
         CACHE_PATH=${CACHE_DIR}/${COMMAND}_cache
-        if [ ! -f "$CACHE_PATH" ] || test "`find $CACHE_PATH -mmin +30`"; then
+        if [ ! -f "$CACHE_PATH" ] || test "`find $CACHE_PATH -mmin +$CACHE_DURATION`"; then
             ./$COMMAND > $CACHE_PATH
             RESULT=$?
             if [ $RESULT -ne 0 ]; then
