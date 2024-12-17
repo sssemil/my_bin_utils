@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# Fetch the current price with a 15-minute interval
+get_current_price() {
+  local pair=$1
+
+  # Fetch OHLC data from Kraken API
+  response=$(curl -s "https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=15")
+
+  # Extract the close price of the most recent 15-minute interval
+  price=$(echo "$response" | jq -r ".result | to_entries[] | select(.key | startswith(\"X\")) | .value | .[-1][4]")
+
+  # Validate price
+  if [[ -z "$price" ]]; then
+    echo "Error: Unable to fetch current price for $pair"
+    exit 1
+  fi
+
+  echo "$price"
+}
+
+# Fetch hourly prices (current hour and 24 hours ago)
+get_hourly_prices() {
+  local pair=$1
+
+  # Fetch hourly OHLC data from Kraken API
+  response=$(curl -s "https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=60")
+
+  # Extract OHLC array for the given pair
+  ohlc=$(echo "$response" | jq -r ".result | to_entries[] | select(.key | startswith(\"X\")) | .value")
+
+  # Extract current hour and 24 hours ago prices
+  current_hour_price=$(echo "$ohlc" | jq -r '.[-1][4]')         # Close price of the current hour
+  price_24h_ago=$(echo "$ohlc" | jq -r '.[-25][4]')            # Close price from 24 hours ago
+
+  # Validate prices
+  if [[ -z "$current_hour_price" || -z "$price_24h_ago" ]]; then
+    echo "Error: Unable to fetch hourly prices for $pair"
+    exit 1
+  fi
+
+  echo "$current_hour_price $price_24h_ago"
+}
+
+# Main function to display data in one line
+display_one_line() {
+  local pair=$1
+  local symbol=$2
+
+  # Get current price
+  current_price=$(get_current_price "$pair")
+
+  # Get hourly prices
+  read -r current_hour_price price_24h_ago <<< $(get_hourly_prices "$pair")
+
+  # Calculate 24-hour change percentage
+  change=$(echo "scale=2; 100 * ($current_hour_price - $price_24h_ago) / $price_24h_ago" | bc)
+
+  # Print result in a single line
+  echo -n "${current_hour_price}[${change}%]$/${symbol}"
+}
+
+# Define mapping for symbols
+declare -A SYMBOLS
+SYMBOLS=(
+  ["BTCUSD"]="₿"
+  ["ETHUSD"]="Ξ"
+  ["XMRUSD"]="ɱ"
+)
+
+# Input pair
+PAIR=$1
+
+if [[ -z "$PAIR" ]]; then
+  echo "Usage: $0 <PAIR>"
+  echo "Examples: BTCUSD, ETHUSD, XMRUSD"
+  exit 1
+fi
+
+# Get symbol
+SYMBOL=${SYMBOLS[$PAIR]}
+
+if [[ -z "$SYMBOL" ]]; then
+  SYMBOL=$PAIR # Default to pair if symbol not mapped
+fi
+
+# Display prices in one line
+display_one_line "$PAIR" "$SYMBOL"

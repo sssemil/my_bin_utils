@@ -1,4 +1,6 @@
 #!/bin/bash
 
-PRICE=`curl -s "https://api.kraken.com/0/public/OHLC?pair=ETHUSD&interval=1" | jq -r '.result.XETHZUSD[0][4]'`
-echo -n "$PRICE $/Ξ"
+#PRICE=`curl -s "https://api.kraken.com/0/public/OHLC?pair=ETHUSD&interval=15" | jq -r '.result.XETHZUSD[0][4]'`
+#echo -n "$PRICE $/Ξ"
+
+~/bin/panel/kraken_price ETHUSD
