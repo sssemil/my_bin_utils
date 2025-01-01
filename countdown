@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Function to parse formatted string XyXmXdXhXmXs into seconds
+parse_time() {
+    local input="$1"
+    local total_seconds=0
+
+    # Use regex to extract time components
+    [[ $input =~ ([0-9]+)y ]] && total_seconds=$((total_seconds + ${BASH_REMATCH[1]} * 365 * 24 * 60 * 60))
+    [[ $input =~ ([0-9]+)m ]] && total_seconds=$((total_seconds + ${BASH_REMATCH[1]} * 30 * 24 * 60 * 60))
+    [[ $input =~ ([0-9]+)d ]] && total_seconds=$((total_seconds + ${BASH_REMATCH[1]} * 24 * 60 * 60))
+    [[ $input =~ ([0-9]+)h ]] && total_seconds=$((total_seconds + ${BASH_REMATCH[1]} * 60 * 60))
+    [[ $input =~ ([0-9]+)m ]] && total_seconds=$((total_seconds + ${BASH_REMATCH[1]} * 60))
+    [[ $input =~ ([0-9]+)s ]] && total_seconds=$((total_seconds + ${BASH_REMATCH[1]}))
+
+    echo $total_seconds
+}
+
+# Function to format seconds as XyXmXdXhXmXs
+format_time() {
+    local seconds=$1
+    local result=""
+
+    local years=$((seconds / (365 * 24 * 60 * 60)))
+    seconds=$((seconds % (365 * 24 * 60 * 60)))
+    [[ $years -gt 0 ]] && result+="${years}y"
+
+    local months=$((seconds / (30 * 24 * 60 * 60)))
+    seconds=$((seconds % (30 * 24 * 60 * 60)))
+    [[ $months -gt 0 ]] && result+="${months}m"
+
+    local days=$((seconds / (24 * 60 * 60)))
+    seconds=$((seconds % (24 * 60 * 60)))
+    [[ $days -gt 0 ]] && result+="${days}d"
+
+    local hours=$((seconds / (60 * 60)))
+    seconds=$((seconds % (60 * 60)))
+    [[ $hours -gt 0 ]] && result+="${hours}h"
+
+    local minutes=$((seconds / 60))
+    seconds=$((seconds % 60))
+    [[ $minutes -gt 0 ]] && result+="${minutes}m"
+
+    [[ $seconds -gt 0 ]] && result+="${seconds}s"
+
+    echo $result
+}
+
+# Main countdown function
+countdown() {
+    local input="$1"
+    local seconds
+
+    # Check if input is numeric or formatted string
+    if [[ $input =~ ^[0-9]+$ ]]; then
+        seconds=$input
+    else
+        seconds=$(parse_time "$input")
+    fi
+
+    # Countdown loop
+    while [[ $seconds -gt 0 ]]; do
+        echo -ne "$(format_time $seconds)\r"
+        sleep 1
+        seconds=$((seconds - 1))
+    done
+    echo "Time's up!"
+}
+
+# Check for input
+if [[ $# -eq 0 ]]; then
+    echo "Usage: $0 <time> (e.g., '90' for 90 seconds or '1d2h3m4s' for 1 day, 2 hours, 3 minutes, and 4 seconds)"
+    exit 1
+fi
+
+# Start the countdown
+countdown "$1"
