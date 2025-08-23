@@ -1,0 +1,17 @@
+#!/bin/bash
+
+POWER_STATE_FILE="/sys/bus/pci/devices/0000:01:00.0/power_state"
+
+if [[ -f "$POWER_STATE_FILE" ]]; then
+    POWER_STATE=$(cat "$POWER_STATE_FILE")
+
+    case "$POWER_STATE" in
+        "D3cold")
+            echo -e "󰩇 "
+            ;;
+        "D0")
+            echo -e "󰇺 "
+            ;;
+    esac
+fi
+

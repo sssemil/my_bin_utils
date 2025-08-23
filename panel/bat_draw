@@ -1,0 +1,16 @@
+#!/bin/bash
+
+total_raw=0
+
+for bat in /sys/class/power_supply/BAT*/power_now; do
+    if [[ -f "$bat" ]]; then
+        raw_value=$(cat "$bat")
+        total_raw=$(( total_raw + raw_value ))
+    fi
+done
+
+# Convert µW → W with 1 decimal precision
+watts=$(awk "BEGIN {printf \"%.1f\", $total_raw/1000000}")
+
+echo -ne "${watts}W"
+
