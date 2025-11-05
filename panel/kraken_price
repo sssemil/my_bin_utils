@@ -1,119 +1,130 @@
 #!/bin/bash
+# Usage: kraken_price <PAIR>
+# Examples: BTCUSD, ETHUSD, XMRUSD, SOLUSD
+# Debug: KRAKEN_DEBUG=1 kraken_price SOLUSD
 
-# Helper function to round a numeric value to k (thousands) or m (millions).
-# By default, it prints up to two decimal places.
+set -o pipefail
+LC_ALL=C
+
+RETRIES=2
+SLEEP_BETWEEN=0.6
+
+log_debug() { [[ -n "$KRAKEN_DEBUG" ]] && echo "DBG: $*" >&2; }
+
+is_number() {
+  [[ "$1" =~ ^-?[0-9]+([.][0-9]+)?$ ]]
+}
+
 round_to_k_or_m() {
   local value="$1"
-
-  # Convert value to a pure number (handle decimals, remove any +/- sign).
+  if ! is_number "$value"; then
+    printf "%s" "$value"; return
+  fi
   local abs_value="${value#-}"
-  # We'll compare as an integer
-  local int_value
-  int_value=$(printf "%.0f" "$abs_value")
-
+  local int_value; int_value=$(printf "%.0f" "$abs_value" 2>/dev/null)
   if (( int_value >= 1000000 )); then
-    # Represent in millions
-    local millions
-    millions=$(bc -l <<< "$value / 1000000")
-    printf "%.2fm" "$millions"
+    printf "%.2fm" "$(bc -l <<< "$value / 1000000")"
   elif (( int_value >= 1000 )); then
-    # Represent in thousands
-    local thousands
-    thousands=$(bc -l <<< "$value / 1000")
-    printf "%.2fk" "$thousands"
+    printf "%.2fk" "$(bc -l <<< "$value / 1000")"
   else
-    # Just print up to two decimals as is
     printf "%.2f" "$value"
   fi
 }
 
-# Fetch the current price with a 15-minute interval
+fetch_json() {
+  # $1: URL
+  local attempt=0
+  local resp
+  while :; do
+    resp=$(curl -sS --fail --compressed --max-time 15 "$1") && { echo "$resp"; return 0; }
+    (( attempt++ >= RETRIES )) && return 1
+    sleep "$SLEEP_BETWEEN"
+  done
+}
+
+# jq selector that **only** picks the candle array (ignores "last" and any non-array values)
+# Produces the array of candles for the requested pair.
+jq_candles='.result
+  | to_entries[]
+  | select(.key != "last" and (.value | type) == "array")
+  | .value'
+
 get_current_price() {
-  local pair=$1
-
-  # Fetch OHLC data from Kraken API
-  response=$(curl -s "https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=15")
-
-  # Extract the close price of the most recent 15-minute interval
-  price=$(echo "$response" | jq -r ".result | to_entries[] | select(.key | startswith(\"X\")) | .value | .[-1][4]")
-
-  # Validate price
-  if [[ -z "$price" ]]; then
-    echo "Error: Unable to fetch current price for $pair"
-    exit 1
+  local pair="$1" response price errlen
+  response=$(fetch_json "https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=15") || {
+    echo "Error: network/API failure for $pair" >&2; return 1; }
+  errlen=$(jq -r '.error | length' <<<"$response")
+  if [[ "$errlen" != "0" ]]; then
+    echo "Error: Kraken returned error(s) for $pair: $(jq -r '.error | join("; ")' <<<"$response")" >&2
+    return 1
   fi
-
-  echo "$price"
+  # Newest candle close
+  price=$(jq -r "${jq_candles} | .[-1][4]" <<<"$response")
+  log_debug "current(15m) raw: $price"
+  if ! is_number "$price"; then
+    echo "Error: Invalid price data for $pair" >&2; return 1
+  fi
+  printf "%s" "$price"
 }
 
-# Fetch hourly prices (current hour and 24 hours ago)
 get_hourly_prices() {
-  local pair=$1
+  local pair="$1" response current price24 errlen
+  response=$(fetch_json "https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=60") || {
+    echo "Error: network/API failure for $pair" >&2; return 1; }
+  errlen=$(jq -r '.error | length' <<<"$response")
+  if [[ "$errlen" != "0" ]]; then
+    echo "Error: Kraken returned error(s) for $pair: $(jq -r '.error | join("; ")' <<<"$response")" >&2
+    return 1
+  fi
+  # Current hour close
+  current=$(jq -r "${jq_candles} | .[-1][4]" <<<"$response")
+  # 7 days ago close; if not enough candles, fall back to first
+  price24=$(jq -r "${jq_candles} | (.[-169][4] // .[0][4])" <<<"$response")
+  log_debug "hourly current: $current ; 7d_ago: $price24"
+  if ! is_number "$current" || ! is_number "$price24"; then
+    echo "Error: Invalid hourly price data for $pair" >&2; return 1
+  fi
+  printf "%s %s" "$current" "$price24"
+}
 
-  # Fetch hourly OHLC data from Kraken API
-  response=$(curl -s "https://api.kraken.com/0/public/OHLC?pair=${pair}&interval=60")
+display_one_line() {
+  local pair="$1" symbol="$2"
+  local current_15 current_hour price_24h_ago change formatted
 
-  # Extract OHLC array for the given pair
-  ohlc=$(echo "$response" | jq -r ".result | to_entries[] | select(.key | startswith(\"X\")) | .value")
+  if ! current_15=$(get_current_price "$pair"); then
+    echo "Error: Unable to fetch current price for $pair" >&2; return 1
+  fi
+  local hourly_output
+  if ! hourly_output=$(get_hourly_prices "$pair"); then
+    echo "Error: Unable to fetch hourly prices for $pair" >&2; return 1
+  fi
+  read -r current_hour price_24h_ago <<< "$hourly_output"
 
-  # Extract current hour and 24 hours ago prices
-  current_hour_price=$(echo "$ohlc" | jq -r '.[-1][4]')    # Close price of the current hour
-  price_24h_ago=$(echo "$ohlc" | jq -r '.[-25][4]')       # Close price from 24 hours ago
-
-  # Validate prices
-  if [[ -z "$current_hour_price" || -z "$price_24h_ago" ]]; then
-    echo "Error: Unable to fetch hourly prices for $pair"
-    exit 1
+  if [[ "$price_24h_ago" == "0" ]]; then
+    change="0.00"
+  else
+    change=$(bc -l <<< "scale=6; 100 * ($current_hour - $price_24h_ago) / $price_24h_ago")
+    change=$(printf "%.2f" "$change")
   fi
 
-  echo "$current_hour_price $price_24h_ago"
+  formatted=$(round_to_k_or_m "$current_hour")
+  printf "%s[%s%%]\$/%s%%\n" "$formatted" "$change" "$symbol"
 }
 
-# Main function to display data in one line
-display_one_line() {
-  local pair=$1
-  local symbol=$2
-
-  # Get current price (15-min close) -- not used in final output below,
-  # but you can display it if you wish.
-  current_price=$(get_current_price "$pair")
-
-  # Get hourly prices
-  read -r current_hour_price price_24h_ago <<< "$(get_hourly_prices "$pair")"
-
-  # Calculate 24-hour change percentage
-  change=$(echo "scale=2; 100 * ($current_hour_price - $price_24h_ago) / $price_24h_ago" | bc)
-
-  # Format the current hour price into k or m
-  formatted_current_hour_price=$(round_to_k_or_m "$current_hour_price")
-
-  # Print result in a single line: e.g., "37.22k[2.13%]$/₿"
-  # (Replace '37.22k' with the final formatted value and symbol as needed)
-  echo -n "${formatted_current_hour_price}[${change}%]\$/${symbol}"
-}
-
-# Define mapping for symbols
-declare -A SYMBOLS
-SYMBOLS=(
+declare -A SYMBOLS=(
   ["BTCUSD"]="₿"
   ["ETHUSD"]="Ξ"
   ["XMRUSD"]="ɱ"
+  ["SOLUSD"]="◎"
 )
 
-# Input pair
-PAIR=$1
-
-if [[ -z "$PAIR" ]]; then
+PAIR="$1"
+if [[ -z "${PAIR:-}" ]]; then
   echo "Usage: $0 <PAIR>"
-  echo "Examples: BTCUSD, ETHUSD, XMRUSD"
+  echo "Examples: BTCUSD, ETHUSD, XMRUSD, SOLUSD"
   exit 1
 fi
 
-# Get symbol or default to the pair itself
-SYMBOL=${SYMBOLS[$PAIR]}
-if [[ -z "$SYMBOL" ]]; then
-  SYMBOL=$PAIR
-fi
-
-# Display prices in one line
+SYMBOL="${SYMBOLS[$PAIR]:-$PAIR}"
 display_one_line "$PAIR" "$SYMBOL"
+
